@@ -1,0 +1,6 @@
+name: component-workshop-terraform
+title: Workshop Terraform
+version: true
+start_page: ROOT:terraform-intro.adoc
+nav:
+- modules/ROOT/nav.adoc

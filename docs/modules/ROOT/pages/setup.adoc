@@ -1,0 +1,89 @@
+= Mise en place
+Etn Mn
+:description: Installation des outils nécessaires à l'utilisation Terraform sous Windows.
+:experimental:
+
+Dans un environnement _Windows_, il est possible d'utiliser _Terraform_ de différentes façons. La plus simple est de passer par https://docs.microsoft.com/fr-fr/azure/developer/terraform/get-started-cloud-shell-bash?tabs=bash[Azure Cloud Shell], qui ne nécessite pas de prérequis en dehors du compte _Azure_. Il est également possible de faire une installation manuelle, d'utiliser une image _Docker_, https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/azure-get-started#install-terraform[Chocolatey], ou de passer par _Windows Subsystem for Linux_ (*WSL*). Cette dernière méthode a pour avantage d'être rapide, performante et de permettre l'utilisation des applications Windows en parallèle des outils en ligne de commande _Linux_ sur le même ensemble de fichiers.
+
+== Prérequis
+
+* _Windows 10_ versions 2004 et ultérieures
+* _VS Code_
+* https://docs.microsoft.com/fr-fr/cli/azure/install-azure-cli-windows?tabs=azure-cli[_Azure CLI_]
+
+== WSL
+
+Le Sous-système Windows pour Linux permet d'exécuter un environnement GNU/Linux (et notamment la plupart des utilitaires, applications et outils en ligne de commande) directement sur Windows, sans modification et tout en évitant la surcharge d'une machine virtuelle traditionnelle. La version WSL 2 embarque un véritable noyau Linux s'exécutant dans une machine virtuelle légère.
+
+.Installation des prérequis et d'une distribution Ubuntu
+ $ wsl --install
+
+.Vérification de l'installation
+ $ wsl -l -v
+
+La version 2 de _WSL_ est à privilégier car https://docs.microsoft.com/fr-fr/windows/wsl/compare-versions[plus performante].
+
+.Installer une nouvelle distribution
+ $ wsl --install -d <distribution>
+
+.Assigner la distribution par défaut
+ $ wsl --set-default <distribution>
+
+A l'issue de l'installation, il faut renseigner les informations du compte utilisateur de la distribution.
+
+.Exécuter la distribution par défaut.
+ $ wsl
+
+TIP: Il est possible d'accéder rapidement aux fichiers de la distribution _WSL_ courante, en tapant `\\wsl$` dans l'explorateur _Windows_.
+
+== Installer Terraform
+
+Les packages _Ubuntu_ sont disponibles sur les serveurs _HashiCorp_. Depuis une fenêtre de commande _WSL_, exécuter les commandes suivantes :
+
+.Ajout du repository HashiCorp
+ $ sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+
+.Ajout de la clé HashiCorp
+ $ curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+
+.Mise à jour du dépôt de packages
+ $ sudo apt-get update
+
+.Installation de Terraform
+ $ sudo apt-get install terraform
+
+.Vérifier l'installation
+ $ terraform -v
+
+== VS Code
+
+Avec *Visual Studio Code* installé et depuis une sessions _WSL_, exécuter la commande `code .` pour démarrer l'installation de _VS Code Server_.
+
+TIP: En l'absence d'éditeur de code, il est possible d'utiliser l'éditeur en ligne _Github_ en appuyant sur la touche kbd:[.] depuis le repo.
+
+Pour pouvoir développer avec _VS Code_ dans _WSL_, il faut installer l'extension https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl[Remote - WSL]. La barre de statut de _VS Code_ indique ensuite en bas à gauche que l'exécution s'effectue dans _WSL_: `WSL : Ubuntu`.
+
+L'extension _VS Code_ https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform[HashiCorp Terraform] n'est pas obligatoire, mais permet d'ajouter des fonctionnalités utiles, telles que : la coloration du code, l'IntelliSense...
+
+CAUTION: J'ai rencontré des soucis à l'utilisation de l'extension _Terraform_, il arrivait que le binaire _Linux_ soit remplacé par une _exe_. Pour éviter cela, il faut installer l'extension via l'option `Install in WSL: Ubuntu (Do not sync)`.
+
+== Authentification Azure
+
+Quand _Terraform_ est exécuté localement, il est nécessaire de lui octroyer l'autorisation de manipuler les ressources _Azure_ en s'identifiant.
+
+.Se connecter avec Azure CLI
+ $ az login
+
+.Lister les subscriptions disponibles
+ $ az account list -o table
+
+.Spécifier la subscription par défaut
+ $ az account set --subscription <subscription id>
+
+Quand Terraform s'exécute sur un server d'intégration, l'authentification est réalisé par un _Service Principal_ ou une identité managée.
+
+TIP: L'authentification est implicite lorsque l'on utilise le _Cloud Shell_.
+
+== Git
+
+Comme pour tous les types de projets, certains fichiers ne doivent pas être gérés en configuration. Le plus simple est d'utiliser le https://github.com/github/gitignore/blob/main/Terraform.gitignore[git ignore] proposé.

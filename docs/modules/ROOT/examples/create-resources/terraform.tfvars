@@ -1,0 +1,1 @@
+resource-group-name = "rg-workshop"

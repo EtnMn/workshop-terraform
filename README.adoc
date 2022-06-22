@@ -1,0 +1,39 @@
+= workshop-terraform
+// URLs
+:url-notes: https://menou.fr/notes
+:url-node-releases: https://nodejs.org/en/about/releases/
+:url-antora-docs: https://docs.antora.org
+// Versions:
+:version-node-major: 16
+:version-node: {version-node-major}.13.0
+
+ifdef::env-github[]
+image:https://github.com/etnmn/notes/actions/workflows/publish.yml/badge.svg[Deploy Status,link={url-actions}]
+endif::[]
+
+This repository hosts notes on *Terraform*, published at {url-notes}.
+
+== Quick start
+
+To check commits, you'll need Node.js (including npm, which is bundled with Node.js) on your system.
+We recommend using the active long term support ({url-node-releases}[LTS releases].) release of Node.js.
+
+To check whether you have Node.js installed, and which version, open a terminal and type:
+
+ $ node -v
+
+If this command fails with an error, it means you don't yet have Node.js installed.
+If the command doesn't report a Node.js LTS version (e.g., v{version-node}), you don't have a suitable version of Node.js installed.
+
+Install _husky_ to automatically have Git hooks enabled:
+
+ $ npm i
+
+== Usage
+
+Instructions to learn more on documentation site processed by _Antora_ are in the {url-docs}[documentation].
+
+== Copyright and License
+
+All files are released under the MIT license.
+See link:LICENSE[] to view the full license text.

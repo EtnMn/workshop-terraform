@@ -1,0 +1,257 @@
+= Créer des ressources Azure
+Etn Mn
+:description: Création de ressources dans Azure.
+:navtitle: Créer des ressources
+
+L'objectif est de créer un _resource group_ contenant un _storage account_.
+
+.Architecture cible
+excalidraw::partial$diagrams/create-resources.excalidraw[svg]
+
+== Azure Provider
+
+Le https://registry.terraform.io/providers/hashicorp/azurerm[_Provider Azure_] permet de gérer les infrastructures _Azure_ en utilisant l'API _ARM_. Le bloc `required_providers` permet, quant à lui, de forcer les versions utilisées.
+
+.versions.tf
+[,terraform]
+----
+include::example$create-resources/versions.tf[]
+----
+
+<.> Bloc de configuration _Terraform_
+<.> Version minimale de _Terraform_ à utiliser
+<.> Clé d'identification locale du provider _AzureRM_
+<.> Source du provider
+<.> https://www.terraform.io/language/providers/requirements#version-constraints[Contrainte de la version du provider]
+<.> Bloc de configuration du provider
+
+IMPORTANT: Pour une question de performance, il est préférable de travailler depuis le répertoire *HOME* de la distribution.
+
+== Resources
+
+Les *Resources* sont des éléments importants du langage _Terraform_. Chaque bloc décrit un objet de l'infrastructure : une machine virtuelle, un _storage account_, ou un https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group[resource group].
+
+.resource-group.tf
+[,terraform]
+----
+include::example$create-resources/resource-group.tf[lines=1..3;8]
+----
+
+<.> _Data source_ permettant de gérer les _resource groups_
+<.> Nom local de la ressource, utilisé pour les <<Attributs, références>> dans le module _Terraform_
+<.> Nom de la ressource dans _Azure_
+<.> Emplacement de la ressource _Azure_
+
+.Initialisation des providers
+ $ terraform init
+
+.Contenu du répertoire projet après l'init
+[listing]
+----
+📒 workshop-terraform
+  📄 .terraform.lock.hcl <.>
+  📄 resource-group.tf
+  📄 versions.tf
+  📂 .terraform
+    📂 providers <.>
+----
+
+<.> Fichier créé lors de l'init pour verrouiller les versions des dépendances utilisées
+<.> Contient les providers téléchargés
+
+.Génération du plan d'exécution (~preview)
+ $ terraform plan
+
+.Détail du plan d'exécution
+[source,bash]
+----
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following
+symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # azurerm_resource_group.t-resource-group will be created
+  + resource "azurerm_resource_group" "t-resource-group" { # <.>
+      + id       = (known after apply)
+      + location = "westeurope"
+      + name     = "rg-workshop"
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+----
+
+<.> Ressource créée (symbole +) si le plan est appliqué
+
+.Mise en application du plan
+ $ terraform apply
+
+[source,bash]
+----
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes # <.>
+
+azurerm_resource_group.t-resource-group: Creating...
+azurerm_resource_group.t-resource-group: Creation complete after 1s [id=/subscriptions/.../resourceGroups/rg-workshop] # <.>
+----
+
+<.> Validation de la création de la ressource
+<.> Le _resource group_ a été créé dans la _subscription_
+
+A l'issue de la commande _apply_, un fichier xref:terraform-intro.adoc#state[state]: `terraform.tfstate` est créé dans le répertoire du projet. Lorsque des *modifications* sont apportées à une ressource gérée par _Terraform_, deux cas sont possibles:
+
+. Les modifications peuvent être appliquées directement à la ressource
+. Les modifications nécessitent de redéployer la ressource. C'est le cas par exemple lorsque l'on souhaite modifier la redondance d'un _storage account_
+
+Pour ajouter un _tag_ au _resource group_ :
+
+.resource-group.tf
+[,terraform]
+----
+include::example$create-resources/resource-group.tf[]
+----
+
+<.> _Data source_ permettant de gérer les _resource groups_
+<.> Nom local de la ressource, utilisé pour référencer dans le module _Terraform_
+<.> Nom de la ressource dans _Azure_
+<.> Emplacement de la ressource _Azure_
+<.> Ajout du _tag_ `environnement`
+
+.Mise à jour du plan d'exécution
+ $ terraform plan
+
+[source,bash]
+----
+azurerm_resource_group.t-resource-group: Refreshing state... [id=/subscriptions/.../resourceGroups/rg-workshop]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following
+symbols:
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # azurerm_resource_group.t-resource-group will be updated in-place
+  ~ resource "azurerm_resource_group" "t-resource-group" { # <.>
+        id       = "/subscriptions/.../resourceGroups/rg-workshop"
+        name     = "rg-workshop"
+      ~ tags     = {
+          + "environment" = "dev"
+        }
+        # (1 unchanged attribute hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
+----
+
+<.> Ressource modifiée (symbole ~)
+
+À partir des informations contenues dans le fichier `terraform.tfstate`, _Terraform_ a déterminé que seul le _tag_ devait être créé.
+
+.Ajout du tag dans Azure
+ $ terraform apply
+
+.Voir l'état du déploiement dans Azure
+ $ terraform show
+
+.Indenter automatiquement les fichier .tf du répertoire
+ $ terraform fmt
+
+== Sauvegarder le plan
+
+lors de l'utilisation de la commande `terraform plan`, il est conseillé de https://www.terraform.io/cli/commands/plan[sauvegarder] le plan afin de s'assurer que l' `apply` soit cohérent avec ce qui a été observé lors de la planification.
+
+ Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly
+ these actions if you run "terraform apply" now.
+
+.Sauvegarde du plan et création du fichier binaire `tfplan`
+ $ terraform plan -out=tfplan
+
+.Application du plan
+ $ terraform apply tfplan
+
+NOTE: Lorsque que l'on applique un plan sauvegardé, aucune confirmation de modification de ressource n'est demandée.
+
+== Les variables
+
+L'utilisation des https://www.terraform.io/language/values/variables[variables] permet de séparer la configuration du code. La configuration peur changer en fonction des environnements cibles, elle doit donc être stockée à l'extérieur de l'application.
+
+.variables.tf
+[,terraform]
+----
+include::example$create-resources/variables.tf[lines=1..10]
+----
+
+<.> La déclaration des variables se fait dans les blocs `variable`. La nom doit être unique et respecter les contraintes des https://www.terraform.io/language/syntax/configuration#identifiers[Identifiers]
+<.> Si le `type` n'est pas spécifié, la valeur par défaut sera `string`
+<.> Une valeur par défaut peut parfois être utile quand on utilise fréquemment les mêmes valeurs. https://github.com/claranet/terraform-azurerm-regions/blob/master/REGIONS.md[Liste des régions Azure] (_Colonne Azure CLI Name_)
+
+Pour faire référence aux variables, on utilise la syntaxe: `var.nom-de-la-variable`
+
+.resource-group.tf
+[,terraform]
+----
+include::example$create-resources/resource-group-var.tf[]
+----
+
+<.> Utilisation des variables du fichier _variables.tf_
+
+Lors du _plan_, les variables sans valeur par défaut devront être renseignées.
+
+== Passer les variables à Terraform
+
+Renseigner manuellement les variables lors du _plan_ est source d'erreurs. Il existe 3 autres possibilités:
+
+=== L'option -var
+
+.Assignation de la variable via la ligne de commande
+ $ terraform plan -var.resource-group-name="rg-workshop"
+
+=== Variable d'environnement
+
+Utile lorsque l'on utilise souvent les mêmes variables. Le nom de la variable d'environnement doit être préfixé par `TF_VAR_`
+
+.Assignation de la variable via la ligne de commande
+ $ export TF_VAR_resource-group-name='rg-workshop'
+
+=== Fichiers de définition des variables
+
+Les fichiers de définition des variables listent les variables et leurs valeurs. Ces fichiers portent l'extension `.tfvars` ou `.tfvars.json`.
+
+.terraform.tfvars
+----
+include::example$create-resources/terraform.tfvars[]
+----
+
+IMPORTANT: Il est préférable d'xref:setup.adoc#git[exclure] ces fichiers du _repository_.
+
+== Attributs
+
+Les attributs d'une xref:create-resources.adoc#resources[ressource] sont ses valeurs post déploiement, par exemple son nom. Il est possible de faire référence à ces informations lors de la configuration grace aux https://www.terraform.io/language/expressions[expressions], la syntaxe est alors: `<RESOURCE TYPE>.<TERRAFORM_NAME>.<ATTRIBUTE>`. On pourra ainsi utiliser le nom du _resource group_ créé précédemment de la manière suivante: `azurerm_resource_group.t-rg-workshop.name`
+
+Dans l'exemple qui suit, on créé un compte de stockage à partir des attributs du _resource group_.
+
+.variables.tf
+----
+include::example$create-resources/variables.tf[lines=12..-1]
+----
+
+.storage-account.tf
+----
+include::example$create-resources/storage-account.tf[]
+----
+<.> https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account[Ajout d'un compte de stockage]
+<.> Utilisation de l'attribut _nom_ du _resource group_
+<.> Utilisation de l'attribut _localisation_ du _resource group_
+<.> https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container[Ajout d'un conteneur]
+<.> Utilisation de l'attribut _nom_ du compte de stockage
+
+== Nettoyer les ressources
+
+L'option `-destroy` permet de supprimer les ressources gérées par _Terraform_.
+
+.Planifier puis supprimer les ressources
+ $ terraform plan -destroy
+ $ terraform apply -destroy

@@ -1,0 +1,63 @@
+= Introduction à Terraform
+Etn Mn
+:description: Introduction à Terraform pour une utilisation dans le cadre d'Azure.
+:navtitle: Introduction
+
+_Terraform_ est un outil *Open source*, développé par https://terraform.io[HashiCorp], permettant de faire de l'*Infrastructure as Code* (IaC). C'est à dire de gérer une infrastructure via des fichiers de configuration, plutôt qu'au travers d'une interface graphique. En pratique, cela permet de créer, modifier et gérer des ressources de manière cohérente et de pouvoir répliquer une infrastructure chez différents fournisseurs, tels que _Azure, AWS_... On parle d'abstraction des ressources.
+
+_Terraform_ est comparable à _Azure Ressource Manager_ (ARM), mais il offre des avantages :
+
+* Utilisable pour différents _Cloud providers_
+* Langage déclaratif propriétaire *HashiCorp Configuration Language* (HCL) pour écrire les fichiers de configuration. Moins courant que le _JSON_ utilisé par _ARM_, mais réputé plus lisible. Les fichier _HCL_ portent l'extension `.tf`
+* Séparation de la planification (simulation) de l'exécution.
+* Parallélisation de la création des ressources lorsqu'il n'y a pas de contrainte de dépendance (cf. <<Resource Graph>>)
+
+== Resource Graph
+
+À partir des fichiers de configuration, _Terraform_ construit un *graph* de dépendances, qui permettra de planifier le déploiement en prenant en compte les dépendances.
+
+.Exemple de graph pour la création d'un resource group
+image::resource-group-graph.svg[graph]
+
+== State
+
+_Terraform_ stocke les informations de l'infrastructure dans un fichier *state*. Créé lors de l'utilisation de la commande *apply*, ce fichier https://www.terraform.io/language/state/purpose[garde la trace] des instances réelles créées chez le _Cloud providers_. Lors de la planification, _Terraform_ compare l'infrastructure existante au fichier _state_, afin de savoir ce qui doit être créé, modifié ou supprimé. Le fichier _state_ porte l'extension `.tfstate`.
+
+TIP: Le fichier _state_ est stocké localement lors du développement. En production il est préférable de le mettre dans un environnement partagé : _backend_, par exemple un *storage account*.
+
+CAUTION: Il ne faut pas éditer le fichier *state*.
+
+== Interpolation
+
+Les expressions sont utilisées pour référencer ou calculer les valeurs présentent dans les fichiers de configuration. Parmi les différents types d'expressions, on trouve l'interpolation. Elle permet de référencer les variables, arguments (ex: _vm_size_ pour le dimensionnement d'une machine virtuelle) ou attributs (ex: l'adresse IP d'une VM déployée) d'autres ressources. La chaîne interpolée est bornée par les caractères `${}`.Pour récupérer l'état d'une variable on utilisera, par exemple : `${var.foo}`. Pour conditionner un état : `${var.env == "production" ? var.prod_subnet : var.dev_subnet}`.
+
+== Providers
+
+Pour interagir avec les fournisseurs d'infrastructure, _Terraform_ s'appuie sur les *providers*. Ce sont des plugins référencés dans les fichiers de configuration, qui vont permettre de gérer les ressources. Dans le cadre de *Microsoft* on peut en distinguer 3 :
+
+* https://github.com/terraform-providers/terraform-provider-azurerm[AzureRM] pour gérer les ressources _Azure_ via _Azure Resource Manager_
+* https://github.com/hashicorp/terraform-provider-azuread[AzureAD] pour _Azure Active Directory_ (AAD)
+* https://github.com/microsoft/terraform-provider-azuredevops[AzureDevops] pour les ressources _DevOps_
+
+Le https://registry.terraform.io/browse/providers[registry] permet de parcourir les providers existants. Une fois référencés dans les fichiers de configuration, les _providers_ sont automatiquement installés lors de l'initialisation de l'espace de travail : `terraform init`.
+
+NOTE: Pour éviter les problèmes liés aux mises à jour des providers, il faut fixer les versions utilisées dans les fichiers de configuration.
+
+== Workflow
+
+Le langage _HCL_ est dit *déclaratif*, par opposition à l'impératif. Le déclaratif permet de décrire l'état souhaité, pour laisser ensuite _Terraform_ gérer les <<Resource Graph, moyens à mettre en oeuvre>> pour y parvenir.
+
+.Workflow Terraform
+excalidraw::partial$diagrams/terraform-workflow.excalidraw[svg]
+
+3 commandes _Terraform_ sont utilisées pour réaliser ce cycle :
+
+* `init`: Installation des plugins utilisés. A ne relancer qu'en cas de changement de configuration du _backend_ ou d'un _module_
+* `plan`: Prévisualisation des modifications qui seront effectuées en prenant en compte la configuration
+* `apply`: Mise à jour des ressources
+
+A noter également l'option `destroy`, applicable à _plan_ et _apply_, qui permet de supprimer les ressources distantes.
+
+== Les fichiers de configuration
+
+La configuration _Terraform_ s'effectue au travers des fichier `.tf` et/ou `.tf.json` présent dans le répertoire courant. Cette configuration peut être séparée en plusieurs fichiers, qui seront _fusionnés_ lors du chargement de la configuration.

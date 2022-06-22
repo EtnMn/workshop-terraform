@@ -1,0 +1,11 @@
+name: Publish to GitHub Pages
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send repository dispatch
+      run: |
+        curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{secrets.PAT_TOKEN}}" https://api.github.com/repos/EtnMn/notes/dispatches -d '{"event_type":"update-doc", "client_payload":{"source":"${{ github.event.repository.name }}" }}'
