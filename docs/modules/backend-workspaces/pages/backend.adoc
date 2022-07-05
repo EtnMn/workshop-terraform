@@ -1,0 +1,58 @@
+= Backend
+
+Les *Backends* définissent l'espace de stockage des fichiers xref:ROOT:terraform-intro.adoc#state[state]. Étant donnée que le _state_ est nécessaire pour lier les ressources des fichiers _Terraform_ à l'architecture réelle, toutes les personnes travaillant sur un même projet doit pouvoir accéder aux même informations. Par défaut, c'est le _backend_ _local_ qui est utilisé, afin de stocker les fichiers sur le disque dur de la machine de travail, mais il existe également des _backends_ distants, comme *azurerm*.
+
+== azurerm
+
+Le _backend_ *azurerm* permet de stocker les _states_ dans un _Azure storage_. Il supporte par défaut le _https://docs.microsoft.com/fr-fr/azure/developer/terraform/store-state-in-azure-storage?tabs=azure-cli#4-understand-state-locking[state locking]_ afin de prévenir des modifications concurrentes, ainsi que le _consistency checking_ pour l'intégrité de la donnée. A ça on peut ajouter le chiffrement au repos et la redondance des données.
+
+A la différence du mode _local_, le _state_ file distant persiste dès le `terraform plan`. Par conséquent, le _storage account_ doit déjà avoir été créé. Après la modification du backend, il faut refaire un `terraform init` pour valider la configuration.
+
+== Créer le storage account
+
+Le _remote _state_ est généralement stocké _resource group_ distinct de celui utilisé pour hébergé l'infrastructure.
+
+[NOTE]
+====
+Quelques liens utiles pour les conventions de nommage dans Azure:
+
+* https://docs.microsoft.com/fr-fr/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations?WT.mc_id=java-26679-cxa[Abréviations recommandées pour les types de ressources Azure]
+* https://docs.microsoft.com/fr-fr/azure/azure-resource-manager/management/resource-name-rules?WT.mc_id=java-26683-cxa[Règles de nommage et restrictions pour les ressources Azure]
+* https://docs.microsoft.com/fr-fr/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming?WT.mc_id=java-26685-cxa[Définir votre convention de nommage]
+====
+
+.create-backend.ps1
+[source,powershell]
+----
+include::example$backend/create-backend.ps1[]
+----
+
+<.> Configuration de la https://docs.microsoft.com/en-us/azure/storage/common/storage-redundancy[redondance des données]
+<.> Désactivation de l'accès publique
+<.> Chiffrement des _blobs_
+<.> Activation du _soft delete_
+<.> Récupération de la clé d'accès au _storage account_
+<.> Empêcher la suppression du _storage account_
+
+== Lier le backend
+
+Pour lier le _backend_ à la configuration, il faut utiliser le bloc de configuration _Terraform_. Les valeurs à renseigner dépendent du https://www.terraform.io/language/settings/backends/azurerm#example-configuration[type d'authentification] (_Azure CLI, Managed Identity, Access key..._). Le code ci-dessous présente la configuration pour une authentification via _Azure CLI_ ou _Service Principal_.
+
+.version.tf
+[source,bash]
+----
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-workshop-state" # <.>
+    storage_account_name = "terraform123abc" # <.>
+    container_name       = "tfstate" # <.>
+    key                  = "prod.terraform.tfstate" # <.>
+  }
+}
+----
+
+<.> Nom du _resource group_ dans _Azure_
+<.> Nom du _storage account_
+<.> Nom du conteneur dans le _storage account_
+<.> Nom du blob stockant le _state_ dans le conteneur
+
