@@ -1,8 +1,7 @@
 name: component-workshop-terraform
 title: Workshop Terraform
-version: backend
-prerelease: (beta)
+version: true
 start_page: ROOT:terraform-intro.adoc
 nav:
 - modules/ROOT/nav.adoc
-- modules/backend-workspaces/nav.adoc
+- modules/advanced-terraform/nav.adoc

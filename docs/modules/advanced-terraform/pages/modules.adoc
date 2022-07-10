@@ -1,0 +1,95 @@
+= Les modules
+Etn Mn
+:description: Création de packages autonomes de configuration.
+
+Les modules _Terraform_ sont des abstractions autonomes de la configuration, permettant d'organiser son code et de le réutiliser. Un module est une collection de fichiers `.tf`, rassemblés dans un même répertoire. Toutes les configurations disposent d'au *moins un module*, appelé _root_ et constitué des fichiers `.tf` présents dans le répertoire principal. Les modules peuvent peuvent appeler des modules enfants, afin d'inclure leurs ressources dans la configuration. Les modules enfants peuvent être appelés plusieurs fois dans une même configuration et plusieurs configurations peuvent appeler les mêmes modules.
+
+Les modules peuvent être chargés depuis les fichiers locaux, mais également depuis un _registry_ privé ou https://registry.terraform.io/browse/modules[public].
+
+== Structure d'un module
+
+.Exemple de structure d'un module
+[listing]
+----
+📒 my-module
+  📄 LICENSE
+  📄 README.md
+  📄 main.tf
+  📄 variables.tf
+  📄 outputs.tf
+----
+
+Il est possible de créer un module avec seulement un seul fichier `.tf` mais il est important de ne pas distribuer les fichiers suivants :
+
+* `terraform.tfstate`, `terraform.tfstate.backup`: _state_ terraform
+* `.terraform`: contient les plugins
+* `*.tfvars`: variables
+
+== Outputs
+
+Les _Outputs_ sont les xref:ROOT:create-resources.adoc#les-variables[variables] de sortie d'un module. Elles ont plusieurs cas d'utilisations :
+
+* Un module enfant peut utiliser les _outputs_ pour exposer des attributs de ses ressources à son module parent
+* Le module racine peut utiliser les _outputs_ pour afficher des informations dans la _CLI_, à l'issue du `terraform apply`
+* Dans le cas des dépôts distants, une configuration peut accéder aux _outputs_ d'un module _root_ d'une autre configuration via le xref:existing-resources#data-source[data source] `terraform_remote_state`. Il est ainsi possible de partager de l'information entre les configurations.
+
+Pour définir une variable de sortie, on utilise le mot clé `output` :
+
+.output.tf
+[,terraform]
+----
+output "azurerm_storage_account_name" {
+  value       = azurerm_storage_account.storage-blob.name # <.>
+  description = "The Azure Blob storage account name."
+}
+----
+
+<.> Le nom du _storage account_ est exposé via la variable `azurerm_storage_account_name`
+
+Pour faire référence à un variable de sortie, il faut utiliser la syntaxe: `module.<nom-du-module>.<nom-output>`
+
+.main.tf
+[,terraform]
+----
+module "application" {
+  source           = "./modules/app-service"
+  resource_group   = azurerm_resource_group.main.name
+  application_name = var.application_name
+  environment      = local.environment
+  location         = var.location
+
+  azure_storage_account_name  = module.storage-blob.azurerm_storage_account_name # <.>
+}
+
+module "storage-blob" { # <.>
+  source           = "./modules/storage-blob" # <.>
+  resource_group   = azurerm_resource_group.main.name
+  application_name = var.application_name
+  environment      = local.environment
+  location         = var.location
+}
+----
+
+<.> Nom du module cible
+<.> Chemin relatif du module
+<.> Récupération de la valeur de la variable de sortie
+
+== Téléchargement depuis GitHub
+
+Un module peut être téléchargé depuis une _repo GitHub_
+
+.Via protocole HTTPS
+[,terraform]
+----
+module "mon_module" {
+    source = "github.com/hajdaini/example"
+}
+----
+
+.Via protocole SSH
+[,terraform]
+----
+module "mon_module" {
+    source = "git@github.com:hajdaini/example.git"
+}
+----

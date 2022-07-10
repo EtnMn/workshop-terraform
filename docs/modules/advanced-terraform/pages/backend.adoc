@@ -1,0 +1,100 @@
+= Backend
+
+Les *Backends* définissent l'espace de stockage des fichiers xref:ROOT:terraform-intro.adoc#state[state]. Le _state_ est nécessaire pour lier les ressources _Terraform_ à l'architecture réelle.  Par défaut, c'est le _backend_ _local_ qui est utilisé et les fichiers sont stockés sur le disque dur de la machine de travail, mais toutes les personnes travaillant sur un projet commun doivent pouvoir accéder aux mêmes informations, ainsi, il existe également des _backends_ distants comme par exemple : *azurerm*.
+
+== azurerm
+
+Le _backend_ *azurerm* permet de stocker les _states_ dans un _Azure storage_. Il supporte par défaut le _https://docs.microsoft.com/fr-fr/azure/developer/terraform/store-state-in-azure-storage?tabs=azure-cli#4-understand-state-locking[state locking]_ pour prévenir des modifications concurrentes, ainsi que le _consistency checking_ pour garantir l'intégrité de la donnée. A cela on peut ajouter le chiffrement au repos et la redondance.
+
+== Créer le storage account
+
+Le _remote state_ est généralement stocké dans un _resource group_ distinct de celui utilisé pour héberger l'infrastructure. Le script suivant permet de réaliser une création classique d'un compte de stockage :
+
+.create-backend.ps1
+[source,powershell]
+----
+include::example$backend/create-backend.ps1[]
+----
+
+<.> Configuration de la https://docs.microsoft.com/en-us/azure/storage/common/storage-redundancy[redondance des données]
+<.> Désactivation de l'accès publique
+<.> Chiffrement des _blobs_
+<.> Activation du _soft delete_
+<.> Récupération de la clé d'accès au _storage account_
+<.> Empêcher la suppression du _storage account_
+
+TIP: D'autres personnalisations peuvent être envisagées pour https://jamescook.dev/bestpractice-terraformstate-azureblob[améliorer le sécurité].
+
+== Configurer le remote backend
+
+Pour lier le _backend_ à la configuration, il faut utiliser le bloc `terraform`. Les valeurs à renseigner dépendent du https://www.terraform.io/language/settings/backends/azurerm#example-configuration[type d'authentification] (_Azure CLI, Managed Identity, Access key..._). Le code ci-dessous présente la configuration pour une authentification via _Azure CLI_ ou _Service Principal_ :
+
+.version.tf
+[,terraform]
+----
+include::example$backend/versions.tf[lines=1..21]
+----
+
+<.> Nom du _resource group_ dans _Azure_
+<.> Nom du _storage account_
+<.> Nom du conteneur dans le _storage account_
+<.> Nom du blob stockant le _state_ dans le conteneur
+
+A la différence du mode _local_, le _state_ distant est créé dès le `terraform init`. Par conséquent, le _storage account_ doit avoir été initialisé au préalable. En cas de modification du backend, il faut refaire un `terraform init` pour valider la configuration.
+
+CAUTION: La configuration du _backend_ ne supporte pas l'interpolation.
+
+== Workspaces
+
+Les données stockées dans le _backend_, appartiennent à un _workspace_. Initialement, il n'y qu'un seul _workspace_ nommé : _default_ et donc un seul état associé à la configuration. Certains _backends_, dont <<azurerm>> peuvent prendre en charge plusieurs _workspaces_, permettant à plusieurs instances de configuration de lui être associées. https://www.terraform.io/language/state/workspaces#when-to-use-multiple-workspaces[Cette fonctionnalité] permet par exemple de tester des changements sans impacter la production, ou encore de gérer les environnements s'il n'y a pas de séparation forte au niveau du backend. Le workspace _default_ est généralement associé à la branche _main_ du code, les autres aux _features_.
+
+=== Gérer les workspaces
+
+Création d'un nouveau _blob_ dans le _backend_, ayant pour nom `terraform.tfstateenv:dev`
+
+.Création du workspace _dev_
+  $ terraform workspace new dev
+
+.Afficher le workspace courant
+  $ terraform workspace show
+
+.Retour sur le workspace par défaut
+  $ terraform workspace select default
+
+
+=== Utiliser le nom du workspace dans la configuration
+
+Dans la configuration, le _workspace_ est accessible via la variable `terraform.workspace`. Dans l'exemple suivant, le nom du _workspace_ est associé au nom du _resource group_ :
+
+.version.tf
+[,terraform]
+----
+include::example$backend/versions.tf[lines=23..-1]
+----
+
+<.> Les valeurs locales permettent d'associer une expression à un nom, qui pourra être réutiliser dans la configuration
+<.> Association du workspace à l'environment
+
+.resource-group.tf
+[,terraform]
+----
+include::example$backend/resource-group.tf[]
+----
+
+<.> Ajout du suffixe de l'environnement au nom de la ressource
+
+En appliquant la configuration sur les 2 _workspaces_, on retrouve bien les 2 _resource groups_ dans _Azure_ :
+
+.Les 2 resource groups ont été créés dans la subscription
+image::workspaces.png[resource groups]
+
+[NOTE]
+====
+Quelques liens utiles pour les conventions de nommage dans Azure:
+
+* https://docs.microsoft.com/fr-fr/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations?WT.mc_id=java-26679-cxa[Abréviations recommandées pour les types de ressources Azure]
+* https://docs.microsoft.com/fr-fr/azure/azure-resource-manager/management/resource-name-rules?WT.mc_id=java-26683-cxa[Règles de nommage et restrictions pour les ressources Azure]
+* https://docs.microsoft.com/fr-fr/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming?WT.mc_id=java-26685-cxa[Définir votre convention de nommage]
+
+Pour le nommage des ressources, il est également possible d'utiliser le _provider_ https://registry.terraform.io/providers/aztfmod/azurecaf/[azurecaf_name]
+====

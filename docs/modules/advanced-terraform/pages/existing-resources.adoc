@@ -1,0 +1,47 @@
+= Utiliser des ressources existantes
+Etn Mn
+:description: Utiliser des ressources existantes et non gérées par _Terraform_.
+:navtitle: Ressources existantes
+
+Il arrive qu'une configuration doive manipuler une ressource Azure existante. Par exemple déployer une machine virtuelle dans réseau virtuel existant. Deux options permettent d'utiliser ces ressources externes : _Import_ et _Data source_.
+
+== Import
+
+La commande `terraform import` permet d'importer des ressources dans une configuration en les ajoutant au _state_. Pour retrouver cette ressource, on utilise son identifiant _Azure_ :
+
+.Récupération de l'identifiant de la resource à importer
+  $ az group show --name to-import-rg --query id --output tsv
+
+Avant d'importer la ressource, on crée son bloc dans la configuration :
+
+.resource-group.tf
+[,terraform]
+----
+resource "azurerm_resource_group" "t-to-import-rg" {
+  name     = "to-import-rg" # <.>
+  location = "westeurope"
+}
+----
+
+<.> Nom associé de la ressource dans _Azure_
+
+.Import de la ressource
+ $ terraform import azurerm_resource_group.t-to-import-rg /subscriptions/xxx/resourceGroups/to-import-rg
+
+== Data source
+
+Les _Data sources_ sont un moyen d'extraire de l'information provenant de l'extérieur de la configuration déployée par _Terraform_, ou provenant d'une autre configuration, et d'utiliser ses propriétés. Ces ressources externes ne sont pas importées dans le _state_ et seront donc pas impactées en cas de `destroy` ou de modifications externes. Les _data sources_ sont associées à des providers en se basant sur leur préfixe, par exemple `azurerm_`.
+
+
+.main.tf
+[,terraform]
+----
+data "azurerm_subscription" "current" {
+}
+
+output "current_subscription_display_name" {
+  value = data.azurerm_subscription.current.display_name # <.>
+}
+----
+
+<.> Affichage du nom de la subscription courante
