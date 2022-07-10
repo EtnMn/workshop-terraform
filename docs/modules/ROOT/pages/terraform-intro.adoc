@@ -25,7 +25,7 @@ _Terraform_ stocke les informations de l'infrastructure dans un fichier *state*.
 
 TIP: Le fichier _state_ est stocké localement lors du développement. En production il est préférable de le mettre dans un environnement partagé : _backend_, par exemple un *storage account*.
 
-CAUTION: Il ne faut pas éditer le fichier *state*.
+CAUTION: Il est préférable de ne pas modifier le contenu d'un fichier *state* manuellement, à la place privilégier la commande `terraform taint`.
 
 == Interpolation
 
