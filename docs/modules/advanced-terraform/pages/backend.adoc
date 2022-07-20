@@ -10,10 +10,10 @@ Le _backend_ *azurerm* permet de stocker les _states_ dans un _Azure storage_. I
 
 Le _remote state_ est généralement stocké dans un _resource group_ distinct de celui utilisé pour héberger l'infrastructure. Le script suivant permet de réaliser une création classique d'un compte de stockage :
 
-.create-backend.ps1
-[source,powershell]
+.create-backend.sh
+[,bash]
 ----
-include::example$backend/create-backend.ps1[]
+include::example$backend/create-backend.sh[]
 ----
 
 <.> Configuration de la https://docs.microsoft.com/en-us/azure/storage/common/storage-redundancy[redondance des données]

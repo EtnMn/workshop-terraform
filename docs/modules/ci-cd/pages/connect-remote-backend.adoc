@@ -1,0 +1,46 @@
+= Connection au remote backend depuis GitHub
+Etn Mn
+:description: Connection au remote backend depuis GitHub.
+:navtitle: Connecter GitHub au backend
+:experimental:
+
+Les fichiers xref:ROOT:terraform-intro.adoc#state[states] permettent de comparer une infrastructure déployée à la configuration _Terraform_ afin de déterminer les modifications à lui apporter. xref:advanced-terraform:backend.adoc#azurerm[Azurerm] permet, quant à lui, de stocker les _states_ dans un _Azure storage_. L'*authentification* au conteneur peut être réaliser de https://www.terraform.io/language/settings/backends/azurerm#example-configuration[différentes manières] :
+
+* Azure CLI
+* Service Principal
+* Azure AD
+* OIDC
+* SAS Token
+* MSI (Managed security identity)
+
+== Shared Access Signature (SAS) Tokens
+
+Les _SAS tokens_ permettent de déléguer l'accès au _storage account_, au conteneur ou même seulement un _blob_, tout en permettant un contrôle poussé de l'accès (durée, filtrage d'_IP_...). Il impose par contre de gérer le renouvellement du jeton et ainsi que sa sécurité. Pour ce dernier point, _Terraform_ recommande d'utiliser la https://www.terraform.io/language/settings/backends/configuration#partial-configuration[configuration partielle] du backend et de définir le _SAS token_ dans les https://www.terraform.io/language/settings/backends/azurerm#configuration-variables[variables d'environnement]: `ARM_SAS_TOKEN`.
+
+Après avoir xref:advanced-terraform:backend.adoc#créer_le_storage_account[créé le conteneur], il est possible de générer le _token_ :
+
+.Générer le SAS token pour le conteneur
+[,bash]
+----
+END_DATE=$(date -u -d "+2 years" +%Y-%m-%dT%H:%MZ) # <.>
+BACKEND_SAS_TOKEN=$(az storage container generate-sas -n $CONTAINER_NAME --account-key $ACCOUNT_KEY --account-name $TF_STORAGE_ACCOUNT --https-only --permissions dlrw --expiry $END_DATE -o tsv)
+----
+
+<.> Période de validité de 2 ans
+
+Dans le _repo GitHub_ du projet, aller dans menu:Settings[Secrets > Actions > New Repository Secret] pour ajouter un nouveau secret nommé `BACKEND_SAS_TOKEN` et ayant pour valeur le token généré.
+
+Créer ensuite un nouveau _workflow GitHub_ :
+
+.terraform.yml
+[,yml]
+----
+include::example$remote/terraform-sas.yml[]
+----
+
+Après l'exécution du __workflow_, le _state_ doit être créé dans le conteneur.
+
+! ajouter des tags lors de la création du Storage account: --tags 'Project=Terraform' 'Env=Demo'
+! revoir le nom des ressources pour le remote backend
+
+== Azure AD

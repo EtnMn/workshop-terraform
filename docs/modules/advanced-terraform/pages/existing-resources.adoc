@@ -32,7 +32,6 @@ resource "azurerm_resource_group" "t-to-import-rg" {
 
 Les _Data sources_ sont un moyen d'extraire de l'information provenant de l'extérieur de la configuration déployée par _Terraform_, ou provenant d'une autre configuration, et d'utiliser ses propriétés. Ces ressources externes ne sont pas importées dans le _state_ et seront donc pas impactées en cas de `destroy` ou de modifications externes. Les _data sources_ sont associées à des providers en se basant sur leur préfixe, par exemple `azurerm_`.
 
-
 .main.tf
 [,terraform]
 ----
@@ -45,3 +44,5 @@ output "current_subscription_display_name" {
 ----
 
 <.> Affichage du nom de la subscription courante
+
+Un exemple d'utilisation de _data source_ consisterait à récupérer les informations sensibles, contenues dans un _Key Vault_.

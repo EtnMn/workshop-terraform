@@ -9,7 +9,6 @@ Dans un environnement _Windows_, il est possible d'utiliser _Terraform_ de diff�
 
 * _Windows 10_ versions 2004 et ultérieures
 * _VS Code_
-* https://docs.microsoft.com/fr-fr/cli/azure/install-azure-cli-windows?tabs=azure-cli[_Azure CLI_]
 
 == WSL
 
@@ -31,10 +30,17 @@ La version 2 de _WSL_ est à privilégier car https://docs.microsoft.com/fr-fr/w
 
 A l'issue de l'installation, il faut renseigner les informations du compte utilisateur de la distribution.
 
-.Exécuter la distribution par défaut.
+.Exécuter la distribution par défaut
  $ wsl
 
 TIP: Il est possible d'accéder rapidement aux fichiers de la distribution _WSL_ courante, en tapant `\\wsl$` dans l'explorateur _Windows_.
+
+== Azure CLI
+
+_Azure CLI_ est une interface en ligne de commande multiplateforme permettant de se connecter à Azure et d’exécuter des commandes d’administration sur les ressources Azure. Elle est installée Azure CLI localement. Même si elle est déjà installé sur le poste, il est préférable de faire également https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt[l'installation] pour l'environnement _WSL_.
+
+.Installation d'_Azure CLI_ pour _Ubuntu_
+ $ curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
 == Installer Terraform
 
