@@ -1,0 +1,15 @@
+== GitHub Actions
+Etn Mn
+:description: Automatiser les déploiements avec GitHub actions
+:navtitle:  Automatiser avec GitHub actions
+
+Les _GitHub actions_ permettent d'automatiser des _workflows_ et notamment les _CI/CD_. Dans le cadre de _Terraform_ les objectifs sont :
+
+. Valider le style et le format des fichiers
+. Effectuer l'analyse du code
+. Générer la planification
+. Déployer la configuration
+
+Les actions effectuées par le _workflow_ dépendent de sont contexte. Certaines étapes ne seront exécutées que dans le cadre d'une _Pull Request_, d'autres uniquement lors d'une fusion sur la branche `main`.
+
+.terraform.yml

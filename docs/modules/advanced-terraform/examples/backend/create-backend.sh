@@ -1,5 +1,6 @@
-RESOURCE_GROUP_NAME=rg-workshop-state
+ENV=Prod
 LOCATION=westeurope
+RESOURCE_GROUP_NAME=rg-workshopstate-${ENV,,}-$LOCATION
 TF_STORAGE_ACCOUNT=ststate$RANDOM
 CONTAINER_NAME=tfstate
 LOCK_NAME=delete-lock
@@ -10,7 +11,8 @@ az storage account create \
   --name $TF_STORAGE_ACCOUNT \
   --sku Standard_LRS \
   --allow-blob-public-access false \
-  --encryption-services blob # <.> <.> <.>
+  --tags 'ApplicationName=Terraform' 'Env=Prod'
+  --encryption-services blob # <.> <.> <.> <.>
 
 az storage account blob-service-properties update --account-name $TF_STORAGE_ACCOUNT \
     --resource-group $RESOURCE_GROUP_NAME \

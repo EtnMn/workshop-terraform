@@ -18,6 +18,7 @@ include::example$backend/create-backend.sh[]
 
 <.> Configuration de la https://docs.microsoft.com/en-us/azure/storage/common/storage-redundancy[redondance des données]
 <.> Désactivation de l'accès publique
+<.> Création des _tags_
 <.> Chiffrement des _blobs_
 <.> Activation du _soft delete_
 <.> Récupération de la clé d'accès au _storage account_
@@ -29,10 +30,10 @@ TIP: D'autres personnalisations peuvent être envisagées pour https://jamescook
 
 Pour lier le _backend_ à la configuration, il faut utiliser le bloc `terraform`. Les valeurs à renseigner dépendent du https://www.terraform.io/language/settings/backends/azurerm#example-configuration[type d'authentification] (_Azure CLI, Managed Identity, Access key..._). Le code ci-dessous présente la configuration pour une authentification via _Azure CLI_ ou _Service Principal_ :
 
-.version.tf
+.main.tf
 [,terraform]
 ----
-include::example$backend/versions.tf[lines=1..21]
+include::example$backend/main.tf[lines=1..21]
 ----
 
 <.> Nom du _resource group_ dans _Azure_
@@ -66,10 +67,10 @@ Création d'un nouveau _blob_ dans le _backend_, ayant pour nom `terraform.tfsta
 
 Dans la configuration, le _workspace_ est accessible via la variable `terraform.workspace`. Dans l'exemple suivant, le nom du _workspace_ est associé au nom du _resource group_ :
 
-.version.tf
+.main.tf
 [,terraform]
 ----
-include::example$backend/versions.tf[lines=23..-1]
+include::example$backend/main.tf[lines=23..-1]
 ----
 
 <.> Les valeurs locales permettent d'associer une expression à un nom, qui pourra être réutiliser dans la configuration

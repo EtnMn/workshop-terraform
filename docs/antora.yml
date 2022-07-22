@@ -5,3 +5,4 @@ start_page: ROOT:terraform-intro.adoc
 nav:
 - modules/ROOT/nav.adoc
 - modules/advanced-terraform/nav.adoc
+- modules/ci-cd/nav.adoc

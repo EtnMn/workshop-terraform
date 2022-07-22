@@ -12,10 +12,10 @@ excalidraw::partial$diagrams/create-resources.excalidraw[svg]
 
 Le https://registry.terraform.io/providers/hashicorp/azurerm[_Provider Azure_] permet de gérer les infrastructures _Azure_ en utilisant l'API _ARM_. Le bloc `required_providers` permet, quant à lui, de forcer les versions utilisées.
 
-.versions.tf
+.main.tf
 [,terraform]
 ----
-include::example$create-resources/versions.tf[]
+include::example$create-resources/main.tf[]
 ----
 
 <.> Bloc de configuration _Terraform_
@@ -51,7 +51,7 @@ include::example$create-resources/resource-group.tf[lines=1..3;8]
 📒 workshop-terraform
   📄 .terraform.lock.hcl <.>
   📄 resource-group.tf
-  📄 versions.tf
+  📄 main.tf
   📂 .terraform
     📂 providers <.>
 ----
