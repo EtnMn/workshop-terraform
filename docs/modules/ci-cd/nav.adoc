@@ -1,1 +1,2 @@
 * xref:connect-remote-backend.adoc[]
+* xref:automate.adoc[]

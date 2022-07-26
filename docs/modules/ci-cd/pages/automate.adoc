@@ -1,7 +1,8 @@
-== GitHub Actions
+= Automatiser avec GitHub Actions
 Etn Mn
 :description: Automatiser les déploiements avec GitHub actions
-:navtitle:  Automatiser avec GitHub actions
+:navtitle:  Automatiser
+:experimental:
 
 Les _GitHub actions_ permettent d'automatiser des _workflows_ et notamment les _CI/CD_. Dans le cadre de _Terraform_ les objectifs sont :
 
@@ -10,6 +11,59 @@ Les _GitHub actions_ permettent d'automatiser des _workflows_ et notamment les _
 . Générer la planification
 . Déployer la configuration
 
-Les actions effectuées par le _workflow_ dépendent de sont contexte. Certaines étapes ne seront exécutées que dans le cadre d'une _Pull Request_, d'autres uniquement lors d'une fusion sur la branche `main`.
+Les actions effectuées par le _workflow_ dépendent de sont contexte. Certaines étapes ne seront exécutées que dans le cadre d'une _Pull Request_, d'autres uniquement lors d'une fusion sur la branche `main`. Pour l'exemple, on distingue 3 cas :
 
-.terraform.yml
+. Un _push_ sur une branche
+. Une création de _Pull Requests_
+. Un _merge_ sur la branche `main`
+
+IMPORTANT: Un _push_ sur la `main` déclencherait la mise à jour de l'infrastructure sans passer, au préalable, par les étapes de validation. Le fait de rendre les _PR_ obligatoires sur cette branche permet d'éviter cela. Pour cela, dans _GitHub_, aller dans menu:Settings[Branches > Add Branch protection rule] et cocher l'option _Require a pull request before merging_.
+
+== Push
+
+Lors d'un _push_, le but est de vérifier que les modifications du code répondent aux standards de développement et ne cassent pas l'existant.
+
+.Workflow de _push_
+excalidraw::partial$diagrams/push.excalidraw[svg]
+
+* *Checkout* : récupération du _repo_ dans l'espace de travail
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=18..19]
+----
+* *Analyse de code statique* : L'analyse statique du code peut être effectuée directement sur le code de configuration _Terraform_, sans avoir à l'exécuter. Elle est utile pour détecter des problèmes de sécurité ou d'incohérences. Ces tests ne nécessitent pas la création d'un plan d'exécution ou d'un déploiement et s'exécutent rapidement. Ils sont généralement exécutés en premier dans le processus d'intégration continue. Différentes solutions existent : https://github.com/bridgecrewio/checkov/[Checkov], Terrascan, tfsec,  Deepsource
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=21..29]
+----
+<.> https://github.com/bridgecrewio/checkov-action[Checkov GitHub action]
+<.> Ignorer les vérifications spécifiées
+* Installation de la *CLI Terraform*
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=32..35]
+----
+* *Mise en forme* : Vérifie que les fichiers sont correctement formatés
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=37..39]
+----
+<.> `-check` retourne un code d'erreur si le format n'est pas correct
+* *Init* : Initialisation de la configuration
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=41..48]
+----
+* *Validate* : Validation de la configuration. Par exemple dans le cas de l'utilisation d'une propriété obsolète
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=49..51]
+----
+
+https://learn.hashicorp.com/tutorials/terraform/automate-terraform?in=terraform/automation#testing-pull-requests-with-terraform-plan
