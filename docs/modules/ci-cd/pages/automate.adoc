@@ -59,7 +59,22 @@ include::example$automate/terraform.yml[lines=37..39]
 ----
 include::example$automate/terraform.yml[lines=41..48]
 ----
-* *Validate* : Validation de la configuration. Par exemple dans le cas de l'utilisation d'une propriété obsolète
+* *Validate* : Validation de la configuration. Par exemple, retourne une erreur le cas de l'utilisation d'une propriété obsolète
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=49..51]
+----
+
+
+== Pull request
+
+Pour une _Pull request_ on ajoute la génération du _plan_ ainsi que la génération d'une synthèse directement dans la _PR_.
+
+.Workflow d'une _PR_
+excalidraw::partial$diagrams/pr.excalidraw[svg]
+
+* *Plan* : génération du _plan_
 +
 [,yml]
 ----

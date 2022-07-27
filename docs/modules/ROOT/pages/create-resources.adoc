@@ -255,3 +255,5 @@ L'option `-destroy` permet de supprimer les ressources gérées par _Terraform_.
 .Planifier puis supprimer les ressources
  $ terraform plan -destroy
  $ terraform apply -destroy
+
+NOTE: il est également possible d'utiliser l'alias `terraform destroy`

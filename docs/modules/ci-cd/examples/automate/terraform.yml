@@ -8,6 +8,10 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_resource_group_name: rg-workshop
+      TF_VAR_azure_region: westeurope
+      TF_VAR_storage_account_name: stworkshop23586785
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -33,19 +37,20 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
-        terraform_version: 1.2.1
+        terraform_version: '>=1.2.1'
 
     - name: Terraform Format
       id: fmt
       run: terraform fmt -check # <.>
 
     - name: Terraform Init
+      id: init
       env:
         ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      run: terraform init
+      run: terraform init -input=false
 
     - name: Terraform Validate
       id: validate
@@ -59,10 +64,10 @@ jobs:
         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      if: github.event_name == 'pull_request'
-      run: terraform plan -input=false -no-color
+      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform plan -out=tfplan -no-color -input=false
 
-     # Add a comment to pull requests with plan results
+    # Add a comment to pull requests with plan results
     - name: add-plan-comment
       id: comment
       uses: actions/github-script@v3
@@ -72,25 +77,29 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          const output =`#### Checkov 🧪\`${{ steps.checkov.outcome }}\`
+          #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
           #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-          #### Terraform Validation 🤖${{ steps.validate.outputs.stdout }}
+          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
           #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-          #### Checkov 🧪\`${{ steps.checkov.outcome }}\`
-
-          <details><summary>Show Plan</summary>
-
-          \`\`\`${process.env.PLAN}\`\`\`
-
-          </details>
 
           <details><summary>Show Checkov Results</summary>
 
+          \`\`\`\n
           ${process.env.CHECKOV_RESULTS}
+          \`\`\`
 
           </details>
 
-          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+          <details><summary>Show Plan</summary>
+
+          \`\`\`\n
+          ${process.env.PLAN}
+          \`\`\`
+
+          </details>
+
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
 
           github.issues.createComment({
             issue_number: context.issue.number,
@@ -99,3 +108,11 @@ jobs:
             body: output
           })
 
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      env:
+        ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      run: terraform apply -input=false tfplan
