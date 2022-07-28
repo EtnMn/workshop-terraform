@@ -23,7 +23,7 @@ image::resource-group-graph.svg[graph]
 
 _Terraform_ stocke les informations de l'infrastructure dans un fichier *state*. Créé lors de l'utilisation de la commande *apply*, ce fichier https://www.terraform.io/language/state/purpose[garde la trace] des instances réelles créées chez le _Cloud providers_. Lors de la planification, _Terraform_ compare l'infrastructure existante au fichier _state_, afin de savoir ce qui doit être créé, modifié ou supprimé. Le fichier _state_ porte l'extension `.tfstate`.
 
-TIP: Le fichier _state_ est stocké localement lors du développement. En production il est préférable de le mettre dans un environnement partagé : _backend_, par exemple un *storage account*.
+TIP: Le fichier _state_ est stocké localement lors du développement. En production il est préférable de le mettre dans un environnement partagé nommé _backend_, par exemple un *storage account*.
 
 CAUTION: Il est préférable de ne pas modifier le contenu d'un fichier *state* manuellement, à la place privilégier la commande `terraform taint`.
 
@@ -56,7 +56,7 @@ excalidraw::partial$diagrams/terraform-workflow.excalidraw[svg]
 * `plan`: Prévisualisation des modifications qui seront effectuées en prenant en compte la configuration
 * `apply`: Mise à jour des ressources
 
-A noter également l'option `destroy`, applicable à _plan_ et _apply_, qui permet de supprimer les ressources distantes.
+A noter également l'option `destroy`, applicable à `plan` et `apply`, qui permet de supprimer les ressources distantes.
 
 == Les fichiers de configuration
 

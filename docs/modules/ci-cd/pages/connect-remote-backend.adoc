@@ -1,0 +1,122 @@
+= Connection au remote backend depuis GitHub
+Etn Mn
+:description: Connection au remote backend depuis GitHub.
+:navtitle: Connecter GitHub au backend
+:experimental:
+
+Les fichiers xref:ROOT:terraform-intro.adoc#state[states] permettent de déterminer les modifications à apporter à une infrastructure en comparant la configuration _Terraform_ à l'existant. Le xref:advanced-terraform:backend.adoc#azurerm[backend  Azurerm] permet de stocker les fichiers _states_ dans un _Azure storage_, dont L'*authentification* peut être réalisée de https://www.terraform.io/language/settings/backends/azurerm#example-configuration[différentes manières] :
+
+* Azure CLI
+* Service Principal
+* Azure AD
+* OIDC
+* SAS Token
+* MSI (Managed security identity)
+
+== Shared Access Signature (SAS) Tokens
+
+Les _SAS tokens_ permettent de déléguer l'accès au _storage account_, au conteneur ou même à un _blob_, tout en permettant un contrôle poussé de l'accès (durée, filtrage d'_IP_...). Il impose par contre de gérer le renouvellement du jeton et ainsi que sa sécurité. Pour ce dernier point, _Terraform_ recommande d'utiliser la https://www.terraform.io/language/settings/backends/configuration#partial-configuration[configuration partielle] du backend et de définir le _SAS token_ dans les https://www.terraform.io/language/settings/backends/azurerm#configuration-variables[variables d'environnement]: `ARM_SAS_TOKEN`.
+
+.Générer le SAS token pour le conteneur
+[,bash]
+----
+END_DATE=$(date -u -d "+2 years" +%Y-%m-%dT%H:%MZ) # <.>
+ARM_SAS_TOKEN=$(az storage container generate-sas -n $CONTAINER_NAME --account-key $ACCOUNT_KEY --account-name $TF_STORAGE_ACCOUNT --https-only --permissions dlrw --expiry $END_DATE -o tsv)
+----
+
+<.> Période de validité de 2 ans
+
+Dans le _repo GitHub_ du projet, aller dans menu:Settings[Secrets > Actions > New Repository Secret] pour ajouter un nouveau secret nommé `ARM_SAS_TOKEN` et ayant pour valeur, le token généré.
+
+Créer ensuite un nouveau https://docs.github.com/en/actions/using-workflows/about-workflows[_workflow GitHub_] :
+
+.terraform.yml
+[,yml]
+----
+include::example$remote/terraform-sas.yml[]
+----
+
+Après exécution du _workflow_, le _state_ doit être présent dans le conteneur.
+
+== Service Principal
+
+Un _service principal_ est une identité utilisée par les applications pour accéder aux ressources _Azure_. Cet accès est limité par les rôles (_RBAC_), ce qui permet de contrôler l'accessibilité aux ressources. Lorsque l'on https://docs.microsoft.com/fr-fr/cli/azure/create-an-azure-service-principal-azure-cli[crée] un _service principal_, on obtient les informations d'identification.
+
+.Création du _service principal_
+ $ az ad sp create-for-rbac --name="SP_NAME" --role="Contributor" --scopes="/subscriptions/SUBSCRIPTION_ID"
+
+.Sortie incluant les secrets à protéger
+----
+{
+  "appId": "00000000-0000-0000-0000-000000000000",
+  "displayName": "SP_NAME",
+  "password": "0000-0000-0000-0000-000000000000",
+  "tenant": "0000-0000-0000-0000-000000000000"
+}
+----
+
+Il est possible de renseigner ces identifiants de https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret#configuring-the-service-principal-in-terraform[différentes manières] dans _Terraform_, mais il est recommandé d'utiliser les variables d'environnement. Dans  _GitHub_, ajouter les secrets suivants :
+
+----
+ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+ARM_CLIENT_SECRET="00000000-0000-0000-0000-000000000000"
+ARM_SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000"
+ARM_TENANT_ID="00000000-0000-0000-0000-000000000000"
+----
+
+Le workflow est ensuite modifié pour inclure ces valeurs :
+
+.terraform.yml
+[,yml]
+----
+include::example$remote/terraform-azuread.yml[]
+----
+
+== Azure AD
+
+La configuration de l'authentification _Azure AD_ est assez proche de celle utilisant le _service principal_, sauf qu'elle n'utilise pas les _access keys_ mais l'_AD_ pour se connecter au _backend_.
+
+.main.tf
+[,terraform]
+----
+  backend "azurerm" {
+    storage_account_name = "ststate18465"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+    use_azuread_auth     = true # <.>
+  }
+----
+
+<.> Impose l'authentification _Azure AD_ pour accéder au _blob storage account_
+
+NOTE: A la place de la propriété `use_azuread_auth`, il est aussi possible de définir la variable d'environnement `ARM_USE_AZUREAD`
+
+L'utilisation de l'authentification _Azure AD_ nécessite d'assigner le rôle `Storage Blob Data Owner` au _service principal_ dans le _storage_. Dans le cas contraire, on obtient l'erreur suivante :
+
+  StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="AuthorizationPermissionMismatch" Message="This request is not authorized to perform this operation using this permission.
+
+.Assignation du rôle
+[,bash]
+----
+az role assignment create \
+  --role "Storage Blob Data Owner" \
+  --assignee 00000000-0000-0000-0000-000000000000 \
+  --scope "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/$RESOURCE_GROUP_NAME/providers/Microsoft.Storage/storageAccounts/$TF_STORAGE_ACCOUNT/blobServices/default/containers/$CONTAINER_NAME"
+----
+La commande suivante permet de lister les particularités du rôle.
+
+.Afficher les permissions du rôle
+[,bash]
+----
+az role definition list \
+  --name "Storage Blob Data Owner" \
+  --output json \
+  --query '[].{actions:permissions[0].actions, notActions:permissions[0].notActions}'
+----
+
+[IMPORTANT]
+====
+La propagation du rôle peut prendre plusieurs minutes avant d'être effective.
+
+Lors du développement, les utilisateurs doivent également posséder ce rôle pour se connecter au conteneur. C'est un bon moyen pour protéger l'accès, mais cela peut être fastidieux à configurer. Il reste possible d'utiliser la https://www.terraform.io/language/settings/backends/configuration#partial-configuration[configuration partielle] et un _SAS token_.
+====

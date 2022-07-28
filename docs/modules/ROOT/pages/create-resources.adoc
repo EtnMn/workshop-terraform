@@ -12,10 +12,10 @@ excalidraw::partial$diagrams/create-resources.excalidraw[svg]
 
 Le https://registry.terraform.io/providers/hashicorp/azurerm[_Provider Azure_] permet de gérer les infrastructures _Azure_ en utilisant l'API _ARM_. Le bloc `required_providers` permet, quant à lui, de forcer les versions utilisées.
 
-.versions.tf
+.main.tf
 [,terraform]
 ----
-include::example$create-resources/versions.tf[]
+include::example$create-resources/main.tf[]
 ----
 
 <.> Bloc de configuration _Terraform_
@@ -51,7 +51,7 @@ include::example$create-resources/resource-group.tf[lines=1..3;8]
 📒 workshop-terraform
   📄 .terraform.lock.hcl <.>
   📄 resource-group.tf
-  📄 versions.tf
+  📄 main.tf
   📂 .terraform
     📂 providers <.>
 ----
@@ -63,7 +63,7 @@ include::example$create-resources/resource-group.tf[lines=1..3;8]
  $ terraform plan
 
 .Détail du plan d'exécution
-[source,bash]
+[,bash]
 ----
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following
 symbols:
@@ -86,7 +86,7 @@ Plan: 1 to add, 0 to change, 0 to destroy.
 .Mise en application du plan
  $ terraform apply
 
-[source,bash]
+[,bash]
 ----
 Do you want to perform these actions?
   Terraform will perform the actions described above.
@@ -123,7 +123,7 @@ include::example$create-resources/resource-group.tf[]
 .Mise à jour du plan d'exécution
  $ terraform plan
 
-[source,bash]
+[,bash]
 ----
 azurerm_resource_group.t-resource-group: Refreshing state... [id=/subscriptions/.../resourceGroups/rg-workshop]
 
@@ -255,3 +255,5 @@ L'option `-destroy` permet de supprimer les ressources gérées par _Terraform_.
 .Planifier puis supprimer les ressources
  $ terraform plan -destroy
  $ terraform apply -destroy
+
+NOTE: il est également possible d'utiliser l'alias `terraform destroy`

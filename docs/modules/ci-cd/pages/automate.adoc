@@ -1,0 +1,109 @@
+= Automatiser avec GitHub Actions
+Etn Mn
+:description: Automatiser les déploiements avec GitHub actions
+:navtitle:  Automatiser
+:experimental:
+
+Les _GitHub actions_ permettent d'automatiser des _workflows_ et notamment les _CI/CD_. Dans le cadre de _Terraform_ les objectifs sont :
+
+. Valider le style et le format des fichiers
+. Effectuer l'analyse du code
+. Générer la planification
+. Déployer la configuration
+
+Les actions effectuées par le _workflow_ dépendent du contexte.
+
+. Un _push_ sur une branche
+. Une création de _Pull Requests_
+. Un _merge_ sur la branche `main`
+
+IMPORTANT: Un _push_ sur `main` déclencherait la mise à jour de l'infrastructure sans validation. Le fait de rendre les _PR_ obligatoires pour cette branche permet d'éviter cela (menu:Settings[Branches > Add Branch protection rule] puis _Require a pull request before merging_).
+
+== Push
+
+Lors d'un _push_, le but est de vérifier que les modifications du code répondent aux standards de développement et ne cassent pas l'existant.
+
+.Workflow de _push_
+excalidraw::partial$diagrams/push.excalidraw[svg]
+
+* *Checkout* : récupération du _repo_ dans l'espace de travail
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=23..24]
+----
+* *Analyse de code statique* : L'analyse statique du code peut être effectuée directement sur le code de configuration _Terraform_. Elle est utile pour détecter des problèmes de sécurité ou des incohérences. Ces tests ne nécessitent pas la création d'un plan d'exécution ou d'un déploiement, et s'exécutent rapidement. Ils sont généralement exécutés en premier dans le processus d'intégration continue. Différentes solutions existent : https://github.com/bridgecrewio/checkov/[Checkov], Terrascan, tfsec,  Deepsource
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=26..34]
+----
+<.> https://github.com/bridgecrewio/checkov-action[Checkov GitHub action]
+<.> Ignorer certaines recommandations
+* Installation de la *CLI Terraform*
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=37..40]
+----
+* *Mise en forme* : Vérifie que les fichiers sont correctement formatés
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=42..44]
+----
+<.> `-check` retourne un code d'erreur si le format n'est pas correct
+* *Init* : Initialisation de la configuration
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=46..53]
+----
+<.> `-input=false` Lève une erreur si une entrée est attendue
+<.> `-no-color` évite la mise en forme qui est mal gérée par _GitHub_
+* *Validate* : Validation de la configuration (utilisation d'une propriété obsolète...)
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=55..57]
+----
+
+== Pull request
+
+Pour une _Pull request_ on ajoute la génération du _plan_ ainsi que la génération d'une synthèse directement dans la _PR_.
+
+.Workflow d'une _PR_
+excalidraw::partial$diagrams/pr.excalidraw[svg]
+
+* *Plan* : génération du _plan_
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=60..68]
+<.> Etape exécutée lors d'une _PR_ ou d'un _push_ sur `main`
+----
+* *Commenter la PR* : génération d'une synthèse dans les commentaires de la _PR_
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=71..109]
+----
+<.> Etape exécutée même si les étapes précédentes ont échoué
+<.> Sortie de l'étape _plan_
+<.> Authentification avec token pré existant pour pouvoir commenter la _PR_
+
+== Merge sur main
+
+La validation de la _PR_ génère un _push_ sur la branche cible. Dans le cas de la branche `main`, on effectue la mise à jour de l'infrastructure.
+
+.Workflow d'un merge sur `main`
+excalidraw::partial$diagrams/merge.excalidraw[svg]
+
+* *Apply* : mise à jour de l'infrastructure
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=111..118]
+----
+
+CAUTION: En production il est conseillé de mettre en place une https://docs.github.com/en/enterprise/2.16/admin/developer-workflow/configuring-protected-branches-and-required-status-checks[règle de protection] sur la branche pour confirmer les déploiements.
