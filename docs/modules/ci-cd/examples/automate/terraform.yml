@@ -50,11 +50,11 @@ jobs:
         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      run: terraform init -input=false
+      run: terraform init -input=false -no-color # <.> <.>
 
     - name: Terraform Validate
       id: validate
-      run: terraform validate -no-color
+      run: terraform validate -no-color # <.>
 
     # Run a terraform plan for pull requests only
     - name: Terraform Plan
@@ -64,18 +64,18 @@ jobs:
         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' && github.event_name == 'push' # <.>
       run: terraform plan -out=tfplan -no-color -input=false
 
     # Add a comment to pull requests with plan results
     - name: add-plan-comment
       id: comment
       uses: actions/github-script@v3
-      if: github.event_name == 'pull_request' && (success() || failure())
+      if: github.event_name == 'pull_request' && (success() || failure()) # <.>
       env:
-        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}" # <.>
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }} # <.>
         script: |
           const output =`#### Checkov 🧪\`${{ steps.checkov.outcome }}\`
           #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`

@@ -11,13 +11,13 @@ Les _GitHub actions_ permettent d'automatiser des _workflows_ et notamment les _
 . Générer la planification
 . Déployer la configuration
 
-Les actions effectuées par le _workflow_ dépendent de sont contexte. Certaines étapes ne seront exécutées que dans le cadre d'une _Pull Request_, d'autres uniquement lors d'une fusion sur la branche `main`. Pour l'exemple, on distingue 3 cas :
+Les actions effectuées par le _workflow_ dépendent du contexte.
 
 . Un _push_ sur une branche
 . Une création de _Pull Requests_
 . Un _merge_ sur la branche `main`
 
-IMPORTANT: Un _push_ sur la `main` déclencherait la mise à jour de l'infrastructure sans passer, au préalable, par les étapes de validation. Le fait de rendre les _PR_ obligatoires sur cette branche permet d'éviter cela. Pour cela, dans _GitHub_, aller dans menu:Settings[Branches > Add Branch protection rule] et cocher l'option _Require a pull request before merging_.
+IMPORTANT: Un _push_ sur `main` déclencherait la mise à jour de l'infrastructure sans validation. Le fait de rendre les _PR_ obligatoires pour cette branche permet d'éviter cela (menu:Settings[Branches > Add Branch protection rule] puis _Require a pull request before merging_).
 
 == Push
 
@@ -30,42 +30,43 @@ excalidraw::partial$diagrams/push.excalidraw[svg]
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=18..19]
+include::example$automate/terraform.yml[lines=23..24]
 ----
-* *Analyse de code statique* : L'analyse statique du code peut être effectuée directement sur le code de configuration _Terraform_, sans avoir à l'exécuter. Elle est utile pour détecter des problèmes de sécurité ou d'incohérences. Ces tests ne nécessitent pas la création d'un plan d'exécution ou d'un déploiement et s'exécutent rapidement. Ils sont généralement exécutés en premier dans le processus d'intégration continue. Différentes solutions existent : https://github.com/bridgecrewio/checkov/[Checkov], Terrascan, tfsec,  Deepsource
+* *Analyse de code statique* : L'analyse statique du code peut être effectuée directement sur le code de configuration _Terraform_. Elle est utile pour détecter des problèmes de sécurité ou des incohérences. Ces tests ne nécessitent pas la création d'un plan d'exécution ou d'un déploiement, et s'exécutent rapidement. Ils sont généralement exécutés en premier dans le processus d'intégration continue. Différentes solutions existent : https://github.com/bridgecrewio/checkov/[Checkov], Terrascan, tfsec,  Deepsource
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=21..29]
+include::example$automate/terraform.yml[lines=26..34]
 ----
 <.> https://github.com/bridgecrewio/checkov-action[Checkov GitHub action]
-<.> Ignorer les vérifications spécifiées
+<.> Ignorer certaines recommandations
 * Installation de la *CLI Terraform*
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=32..35]
+include::example$automate/terraform.yml[lines=37..40]
 ----
 * *Mise en forme* : Vérifie que les fichiers sont correctement formatés
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=37..39]
+include::example$automate/terraform.yml[lines=42..44]
 ----
 <.> `-check` retourne un code d'erreur si le format n'est pas correct
 * *Init* : Initialisation de la configuration
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=41..48]
+include::example$automate/terraform.yml[lines=46..53]
 ----
-* *Validate* : Validation de la configuration. Par exemple, retourne une erreur le cas de l'utilisation d'une propriété obsolète
+<.> `-input=false` Lève une erreur si une entrée est attendue
+<.> `-no-color` évite la mise en forme qui est mal gérée par _GitHub_
+* *Validate* : Validation de la configuration (utilisation d'une propriété obsolète...)
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=49..51]
+include::example$automate/terraform.yml[lines=55..57]
 ----
-
 
 == Pull request
 
@@ -78,7 +79,31 @@ excalidraw::partial$diagrams/pr.excalidraw[svg]
 +
 [,yml]
 ----
-include::example$automate/terraform.yml[lines=49..51]
+include::example$automate/terraform.yml[lines=60..68]
+<.> Etape exécutée lors d'une _PR_ ou d'un _push_ sur `main`
+----
+* *Commenter la PR* : génération d'une synthèse dans les commentaires de la _PR_
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=71..109]
+----
+<.> Etape exécutée même si les étapes précédentes ont échoué
+<.> Sortie de l'étape _plan_
+<.> Authentification avec token pré existant pour pouvoir commenter la _PR_
+
+== Merge sur main
+
+La validation de la _PR_ génère un _push_ sur la branche cible. Dans le cas de la branche `main`, on effectue la mise à jour de l'infrastructure.
+
+.Workflow d'un merge sur `main`
+excalidraw::partial$diagrams/merge.excalidraw[svg]
+
+* *Apply* : mise à jour de l'infrastructure
++
+[,yml]
+----
+include::example$automate/terraform.yml[lines=111..118]
 ----
 
-https://learn.hashicorp.com/tutorials/terraform/automate-terraform?in=terraform/automation#testing-pull-requests-with-terraform-plan
+CAUTION: En production il est conseillé de mettre en place une https://docs.github.com/en/enterprise/2.16/admin/developer-workflow/configuring-protected-branches-and-required-status-checks[règle de protection] sur la branche pour confirmer les déploiements.
